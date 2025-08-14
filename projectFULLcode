@@ -1,0 +1,138 @@
+# In this  file the full code of the Industryreleventproject  well maintained folder in this . 
+
+Industryreleventproject
+|___ terraformFirstM0duLe / main.tf , vpc.tf , SG.tf , Output.tf , Storage.tf , Variables.tf 
+|
+|___Terraformcoderunner / main.tf , providers.tf 
+|
+|___Ansible / ansibleHTTPD.yaml  , AnsibleDynamic.yaml  
+|
+|___Bash / filecopy.sh 
+
+TerraformFirstM0dule / vpc.tf
+resource "aws_vpc" "projectvpc" {
+  cidr_block           = "10.0.0.0/16"
+  instance_tenancy     = "default"
+  tags = {
+    Name    = "projectvpc"
+    project = "vpcforproject"
+  }
+}
+resource "aws_subnet" "publicSubnet01" {
+  vpc_id                  = aws_vpc.projectvpc.id
+  cidr_block              = "10.0.1.0/24"
+  availability_zone       = "us-east-1a"
+  map_public_ip_on_launch = true
+  tags = {
+    Name = "projectsubnet01"
+  }
+}
+resource "aws_subnet" "publicSubnet02" {
+  vpc_id                  = aws_vpc.projectvpc.id
+  cidr_block              = "10.0.2.0/24"
+  availability_zone       = "us-east-1b"
+  map_public_ip_on_launch = true
+  tags = {
+    Name = "projectsubnet02"
+  }
+}
+resource "aws_internet_gateway" "main_igw" {
+  vpc_id = aws_vpc.projectvpc.id
+  tags = {
+    Name = "projectIG"
+  }
+}
+resource "aws_route_table" "public_rt" {
+  vpc_id = aws_vpc.projectvpc.id
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.main_igw.id
+  }
+  tags = {
+    Name = "PublicRouteTable"
+  }
+}
+resource "aws_route_table_association" "public_subnet01_association" {
+  subnet_id      = aws_subnet.publicSubnet01.id
+  route_table_id = aws_route_table.public_rt.id
+}
+resource "aws_route_table_association" "public_subnet02_association" {
+  subnet_id      = aws_subnet.publicSubnet02.id
+  route_table_id = aws_route_table.public_rt.id
+}
+
+TerraformFirstM0dule / SG.tf
+resource "aws_security_group" "projectSG" {
+  name = "projectSG"
+  description = " this is the SG for project that allow the ssh , ping or the http "
+  vpc_id = aws_vpc.projectvpc.id
+  ingress {
+    description = "allow SSH"
+    from_port = 22
+    to_port = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+   ingress {
+    description = "Allow HTTP"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  ingress {
+    description = "Allow ICMP Ping"
+    from_port   = 8
+    to_port     = -1
+    protocol    = "icmp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  egress {
+  from_port   = 0
+  to_port     = 0
+  protocol    = "-1"
+  cidr_blocks = ["0.0.0.0/0"]
+}
+  tags = {
+    Name = "projectSG"
+  }
+}
+
+TerraformFirstM0dule / Main.tf 
+
+resource "aws_instance" "aws_rhel_project" {
+  ami                    = "ami-02f0e5fd663a974aa" # RHEL AMI
+  instance_type          = var.rhel_instance_type
+  vpc_security_group_ids = [aws_security_group.project_security_group.id]
+  subnet_id              = aws_subnet.project_subnet_01.id
+  key_name               = "terraform-keyincalifornia"
+
+  tags = {
+    Name = "frontend"
+    OS   = "RHEL01"
+  }
+}
+resource "aws_instance" "aws_rhel_project02" {
+  ami                    = "ami-02f0e5fd663a974aa" # RHEL AMI
+  instance_type          = var.rhel_instance_type
+  vpc_security_group_ids = [aws_security_group.project_security_group.id]
+  subnet_id              = aws_subnet.project_subnet_01.id
+  key_name               = "terraform-keyincalifornia"
+
+  tags = {
+    Name = "backend_instance"
+    OS   = "RHEL"
+  }
+}
+resource "aws_instance" "aws_ubuntu_instance" {
+  ami                    = "ami-014e30c8a36252ae5" # Ubuntu AMI
+  instance_type          = var.ubuntu_instance_type
+  vpc_security_group_ids = [aws_security_group.project_security_group.id]
+  subnet_id              = aws_subnet.project_subnet_02.id
+  key_name               = "terraform-keyincalifornia"
+ tags = {
+    Name = "batabase"
+    OS   = "Ubuntu"
+  }
+}
+
